@@ -10,7 +10,7 @@ def lookup(ref, version="kjv"):
     response = requests.get(API_STRING.format(ref, version))
     
     if response.status_code != 200:
-        return str(response.status_code)
+        return "{}: {}".format(response.status_code, response.reason)
 
     stripped = response.text.strip("();")
     return json.loads(stripped)
