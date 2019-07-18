@@ -1,7 +1,9 @@
+import bible_lookup as bl
 import os.path
 import praw
 
-COMMENT_LIMIT = 100
+SUBREDDIT = "pythonforengineers"
+COMMENT_LIMIT = 500
 SAVE_FILE = "bookmark.txt"
 
 
@@ -17,7 +19,7 @@ def save_bookmark(id):
 
 if __name__ == "__main__":
     reddit = praw.Reddit("bible-bot")
-    subreddit = reddit.subreddit("dankchristianmemes")
+    subreddit = reddit.subreddit(SUBREDDIT)
 
     comments = subreddit.comments(limit=COMMENT_LIMIT)
     bookmark = load_bookmark() if os.path.exists(SAVE_FILE) else None
@@ -27,9 +29,13 @@ if __name__ == "__main__":
         if bookmark == comment.id:
             break
 
+        refs = bl.extract_references(comment.body.replace("\\", ""))
+        if refs:
+            passages = bl.batch_lookup(refs)
+            replies = bl.construct_replies(passages)
+            reply_body = "\n---\n".join(replies)
+            comment.reply(reply_body)
+
         # Store most recent comment as bookmark
         if comments.yielded == 1:
             save_bookmark(comment.id)
-
-    
-    
