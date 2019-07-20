@@ -7,20 +7,20 @@ from ratelimit import limits, sleep_and_retry
 
 SUBREDDIT = "pythonforengineers"
 COMMENT_LIMIT = 100
-SAVE_FILE = "bookmark.txt"
+SAVE_FILE = "read_comments.txt"
 LOG_FILE = "bible-bot.log"
 LOG_LEVEL = logging.INFO
 LOG_FORMAT = "[%(asctime)s] %(levelname)s: %(message)s"
 
 
-def load_bookmark():
+def load_read_comments():
     with open(SAVE_FILE) as f:
-        return f.read()
+        return f.readlines()
 
 
-def save_bookmark(id):
+def save_read_comments(ids):
     with open(SAVE_FILE, "w") as f:
-        f.write(id)
+        f.writelines(ids)
 
 
 @sleep_and_retry
@@ -40,27 +40,28 @@ if __name__ == "__main__":
     subreddit = reddit.subreddit(SUBREDDIT)
 
     comments = subreddit.comments(limit=COMMENT_LIMIT)
-    bookmark = load_bookmark() if os.path.exists(SAVE_FILE) else None
+    read_comments = load_read_comments() if os.path.exists(SAVE_FILE) else None
+    new_read_comments = []
 
     for comment in comments:
-        # Stop if comment has been seen before
-        if bookmark == comment.id:
-            break
+        # Skip comments that have been read before
+        if read_comments and comment.id in read_comments:
+            continue
 
         refs = bl.extract_references(comment.body.replace("\\", ""))
         if refs:
             logging.info("Processing comment " + comment.id)
-            
+
             passages = bl.batch_lookup(refs)
             replies = bl.construct_replies(passages)
 
             reply_body = "\n---\n".join(replies)
             try:
                 reply_to(comment, reply_body)
+                new_read_comments.append(comment.id)
                 logging.info("Successfully reply to " + comment.id)
             except APIException as err:
-                logging.error(err.message)
+                logging.error("{}: {}".format(err.error_type, err.message))
 
-        # Store most recent comment as bookmark
-        if comments.yielded == 1:
-            save_bookmark(comment.id)
+
+    save_read_comments(new_read_comments)
