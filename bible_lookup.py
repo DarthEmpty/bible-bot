@@ -1,22 +1,29 @@
 import json
+import logging
 from pprint import pprint
+from ratelimit import limits, sleep_and_retry
 import re
 import requests
 
 
 API_STRING = "https://getbible.net/json?text={}&ver={}"
-REFERENCE_PATTERN = r"\[\[(.*?)\]\]"
+REFERENCE_PATTERN = "\[\[(.*?)\]\]"
 
 
 def extract_references(text: str):
     return re.findall(REFERENCE_PATTERN, text)
 
 
+@sleep_and_retry
+@limits(calls=2, period=1)
 def lookup(ref: str, version="kjv"):
+    logging.info("Looking up {}...".format(ref))
+    
     response = requests.get(API_STRING.format(ref, version))
     
     if response.status_code != 200:
-        return "{}: {}".format(response.status_code, response.reason)
+        logging.error("{}: {}".format(response.status_code, response.reason))
+        return ""
 
     stripped = response.text.strip("();")
     return json.loads(stripped)
@@ -32,7 +39,7 @@ def construct_reply(passage: dict):
 
     reply = "{} {} ({})\n\n".format(passage["book_name"], passage["chapter_nr"], passage["version"])
     for num in verse_numbers:
-        reply += "{}: {}".format(num, verses[num]["verse"])
+        reply += "^({}) {}".format(num, verses[num]["verse"])
 
     return reply
 
@@ -51,7 +58,6 @@ def construct_replies(passages: list):
             replies.append(construct_reply(passage))
     
     return replies
-
 
 
 if __name__ == "__main__":
