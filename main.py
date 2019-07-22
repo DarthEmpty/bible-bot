@@ -1,4 +1,5 @@
 import bible_lookup as bl
+import json
 import logging
 import os.path
 import praw
@@ -7,7 +8,7 @@ from ratelimit import limits, sleep_and_retry
 
 SUBREDDIT = "pythonforengineers"
 COMMENT_LIMIT = 200
-SAVE_FILE = "read_comments.txt"
+SAVE_FILE = "read_comments.json"
 LOG_FILE = "bible-bot.log"
 LOG_LEVEL = logging.INFO
 LOG_FORMAT = "[%(asctime)s] %(levelname)s: %(message)s"
@@ -15,12 +16,12 @@ LOG_FORMAT = "[%(asctime)s] %(levelname)s: %(message)s"
 
 def load_read_comments():
     with open(SAVE_FILE) as f:
-        return f.readlines()
+        return json.loads(f.read())
 
 
 def save_read_comments(ids):
     with open(SAVE_FILE, "w") as f:
-        f.writelines(ids)
+        f.write(json.dumps(ids))
 
 
 @sleep_and_retry

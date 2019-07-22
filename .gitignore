@@ -125,4 +125,4 @@ dmypy.json
 
 # Unique
 praw.ini
-read_comments.txt
+read_comments.json
