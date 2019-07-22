@@ -6,7 +6,7 @@ import re
 import requests
 
 
-API_STRING = "https://getbible.net/json?text={}&ver={}"
+API_STRING = "https://getbible.net/json?text={}"
 
 # Matches with:
 # <book><chapter> (book may have digit as prefix)
@@ -21,10 +21,10 @@ def extract_references(text: str):
 
 @sleep_and_retry
 @limits(calls=2, period=1)
-def lookup(ref: str, version="kjv"):
+def lookup(ref: str):
     logging.info("Looking up {}...".format(ref))
     
-    response = requests.get(API_STRING.format(ref, version))
+    response = requests.get(API_STRING.format(ref))
     
     if response.status_code != 200 or response.text == "NULL":
         logging.error("{}: {}".format(response.status_code, response.reason))
