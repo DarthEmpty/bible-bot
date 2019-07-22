@@ -6,7 +6,7 @@ from praw.exceptions import APIException
 from ratelimit import limits, sleep_and_retry
 
 SUBREDDIT = "pythonforengineers"
-COMMENT_LIMIT = 100
+COMMENT_LIMIT = 200
 SAVE_FILE = "read_comments.txt"
 LOG_FILE = "bible-bot.log"
 LOG_LEVEL = logging.INFO
@@ -29,23 +29,14 @@ def reply_to(comment, body):
     comment.reply(body)
 
 
-if __name__ == "__main__":
-    logging.basicConfig(
-        filename=LOG_FILE,
-        level=LOG_LEVEL,
-        format=LOG_FORMAT
-    )
-
-    reddit = praw.Reddit("bible-bot")
-    subreddit = reddit.subreddit(SUBREDDIT)
-
+def main(subreddit):
     comments = subreddit.comments(limit=COMMENT_LIMIT)
-    read_comments = load_read_comments() if os.path.exists(SAVE_FILE) else None
+    read_comments = load_read_comments() if os.path.exists(SAVE_FILE) else []
     new_read_comments = []
 
     for comment in comments:
         # Skip comments that have been read before
-        if read_comments and comment.id in read_comments:
+        if comment.id in read_comments:
             continue
 
         refs = bl.extract_references(comment.body.replace("\\", ""))
@@ -63,5 +54,18 @@ if __name__ == "__main__":
             except APIException as err:
                 logging.error("{}: {}".format(err.error_type, err.message))
 
-
     save_read_comments(new_read_comments)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        filename=LOG_FILE,
+        level=LOG_LEVEL,
+        format=LOG_FORMAT
+    )
+
+    reddit = praw.Reddit("bible-bot")
+    subreddit = reddit.subreddit(SUBREDDIT)
+
+    while True:
+        main(subreddit)
