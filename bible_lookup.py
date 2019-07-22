@@ -7,11 +7,16 @@ import requests
 
 
 API_STRING = "https://getbible.net/json?text={}&ver={}"
-REFERENCE_PATTERN = "\[\[(.*?)\]\]"
+
+# Matches with:
+# <book><chapter> (book may have digit as prefix)
+# <book><chapter>:<verse>
+# <book><chapter>:<verse>-<verse>
+REFERENCE_PATTERN = "\[\[(\d?[a-zA-Z]+\d+(?::\d+(?:-\d+)?)?)\]\]"
 
 
 def extract_references(text: str):
-    return re.findall(REFERENCE_PATTERN, text)
+    return re.findall(REFERENCE_PATTERN, text.replace(" ", ""))
 
 
 @sleep_and_retry
