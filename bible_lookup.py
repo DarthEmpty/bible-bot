@@ -26,7 +26,7 @@ def lookup(ref: str, version="kjv"):
     
     response = requests.get(API_STRING.format(ref, version))
     
-    if response.status_code != 200:
+    if response.status_code != 200 or response.text == "NULL":
         logging.error("{}: {}".format(response.status_code, response.reason))
         return ""
 
@@ -35,16 +35,16 @@ def lookup(ref: str, version="kjv"):
 
 
 def batch_lookup(refs: list):
-    return [ lookup(ref) for ref in refs ]
+    return [ lookup(ref) for ref in refs ]    
 
 
 def construct_reply(passage: dict):
-    verses = passage["chapter"]
-    verse_numbers = sorted(list(verses.keys()), key=lambda k: int(k))
+    chapter = passage["chapter"]
+    verse_numbers = sorted(list(chapter.keys()), key=lambda k: int(k))
 
     reply = "{} {} ({})\n\n".format(passage["book_name"], passage["chapter_nr"], passage["version"])
     for num in verse_numbers:
-        reply += "^({}) {}".format(num, verses[num]["verse"])
+        reply += "^({}) {}".format(num, chapter[num]["verse"])
 
     return reply
 
@@ -53,20 +53,25 @@ def construct_replies(passages: list):
     replies = []
 
     for passage in passages:
-        if "book" in passage:
-            for section in passage["book"]:
-                section["version"] = passage["version"]
-
-            replies.extend(construct_replies(passage["book"]))
-            
-        else:
+        if passage["type"] == "chapter":
             replies.append(construct_reply(passage))
+            
+        elif passage["type"] == "verse":
+            for chapter in passage["book"]:
+                chapter["version"] = passage["version"]
+                replies.append(construct_reply(chapter))
+
+        else:
+            replies.append("Could not find requested passage")
     
     return replies
 
 
 if __name__ == "__main__":
-    passages = extract_references("I love what Jesus says in [[John3:16-18]] - especially when he says that bit about love in John3:16! Some of my other favourites are [[1 Corinthians 13]] and [[Romans 12:2]]")
-    res = batch_lookup(passages)
-    replies = construct_replies(res)
-    pprint(replies)
+    refs = extract_references("""
+        I love what Jesus says in [[John 3: 16 - 18]] - especially when he says that bit about love in John3:16!
+        Some of my other favourites are [[1 Corinthians 13]] and [[Romans 12:2]]
+    """)
+    passages = batch_lookup(refs)
+    replies = construct_replies(passages)
+    print(replies)
