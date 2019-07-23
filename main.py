@@ -31,12 +31,9 @@ def reply_to(comment, body):
     comment.reply(body)
 
 
-def main(subreddit):
+def process_comments_in(subreddit, read_comments):
+    new_comment_to_save = False
     comments = subreddit.comments(limit=COMMENT_LIMIT)
-    read_comments = deque(
-        load_read_comments() if os.path.exists(SAVE_FILE) else [],
-        COMMENT_LIMIT
-    )
 
     for comment in comments:
         # Skip comments that have been read before
@@ -54,11 +51,13 @@ def main(subreddit):
             try:
                 reply_to(comment, reply_body)
                 read_comments.append(comment.id)
+                new_comment_to_save = True
                 logging.info("Successfully reply to " + comment.id)
             except APIException as err:
                 logging.error("{}: {}".format(err.error_type, err.message))
 
-    save_read_comments(list(read_comments))
+    if new_comment_to_save:
+        save_read_comments(list(read_comments))
 
 
 if __name__ == "__main__":
@@ -71,5 +70,10 @@ if __name__ == "__main__":
     reddit = praw.Reddit("bible-bot")
     subreddit = reddit.subreddit(SUBREDDIT)
 
+    read_comments = deque(
+        load_read_comments() if os.path.exists(SAVE_FILE) else [],
+        COMMENT_LIMIT
+    )
+
     while True:
-        main(subreddit)
+        process_comments_in(subreddit, read_comments)
