@@ -16,7 +16,7 @@ REFERENCE_PATTERN = "\[\[(\d?[a-zA-Z]+\d+(?::\d+(?:-\d+)?)?)\]\]"
 
 
 def extract_references(text: str):
-    return re.findall(REFERENCE_PATTERN, text.replace(" ", ""))
+    return re.findall(REFERENCE_PATTERN, text.replace(" ", "").replace("\\", ""))
 
 
 @sleep_and_retry
@@ -27,8 +27,8 @@ def lookup(ref: str):
     response = requests.get(API_STRING.format(ref))
     
     if response.status_code != 200 or response.text == "NULL":
-        logging.error("{}: {}".format(response.status_code, response.reason))
-        return ""
+        logging.error("{} ({}): {}".format(response.status_code, response.reason, response.text))
+        return { "type": None }
 
     stripped = response.text.strip("();")
     return json.loads(stripped)

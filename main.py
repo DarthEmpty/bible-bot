@@ -1,4 +1,5 @@
 import bible_lookup as bl
+from collections import deque
 import json
 import logging
 import os.path
@@ -32,15 +33,17 @@ def reply_to(comment, body):
 
 def main(subreddit):
     comments = subreddit.comments(limit=COMMENT_LIMIT)
-    read_comments = load_read_comments() if os.path.exists(SAVE_FILE) else []
-    new_read_comments = []
+    read_comments = deque(
+        load_read_comments() if os.path.exists(SAVE_FILE) else [],
+        COMMENT_LIMIT
+    )
 
     for comment in comments:
         # Skip comments that have been read before
         if comment.id in read_comments:
             continue
 
-        refs = bl.extract_references(comment.body.replace("\\", ""))
+        refs = bl.extract_references(comment.body)
         if refs:
             logging.info("Processing comment " + comment.id)
 
@@ -50,12 +53,12 @@ def main(subreddit):
             reply_body = "\n---\n".join(replies)
             try:
                 reply_to(comment, reply_body)
-                new_read_comments.append(comment.id)
+                read_comments.append(comment.id)
                 logging.info("Successfully reply to " + comment.id)
             except APIException as err:
                 logging.error("{}: {}".format(err.error_type, err.message))
 
-    save_read_comments(new_read_comments)
+    save_read_comments(list(read_comments))
 
 
 if __name__ == "__main__":
